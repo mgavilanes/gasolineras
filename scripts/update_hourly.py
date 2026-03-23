@@ -5,6 +5,8 @@ Runs in GitHub Actions from the repo root (web/data/public/).
 """
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 import json
 import os
 from datetime import datetime
@@ -12,10 +14,15 @@ from datetime import datetime
 BASE_URL = "https://sedeaplicaciones.minetur.gob.es/ServiciosRESTCarburantes/PreciosCarburantes"
 PRODUCTS = {1: "g95", 3: "g98", 4: "gA"}
 
+session = requests.Session()
+session.mount("https://", HTTPAdapter(max_retries=Retry(
+    total=4, backoff_factor=2, status_forcelist=[500, 502, 503, 504]
+)))
+
 
 def fetch_product(product_id):
     url = f"{BASE_URL}/EstacionesTerrestres/FiltroProducto/{product_id}"
-    resp = requests.get(url, timeout=30)
+    resp = session.get(url, timeout=60)
     resp.raise_for_status()
     return resp.json()
 

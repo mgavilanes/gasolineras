@@ -5,6 +5,8 @@ Runs in GitHub Actions from the repo root (web/data/public/).
 """
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 import json
 import os
 import re
@@ -19,12 +21,17 @@ PRODUCTS = {1: "gasolina_95", 3: "gasolina_98", 4: "gasoleo_a"}
 PRICES_DIR = "prices"
 REF_DATE = "2026-02-28"
 
+session = requests.Session()
+session.mount("https://", HTTPAdapter(max_retries=Retry(
+    total=4, backoff_factor=2, status_forcelist=[500, 502, 503, 504]
+)))
+
 
 def fetch_historical(day, product_id):
     """Fetch historical data for a specific day. Falls back to real-time."""
     url = f"{BASE_URL}/EstacionesTerrestresHist/FiltroProducto/{day.strftime('%d-%m-%Y')}/{product_id}"
     try:
-        resp = requests.get(url, timeout=30)
+        resp = session.get(url, timeout=60)
         resp.raise_for_status()
         data = resp.json()
         if data.get("ListaEESSPrecio"):
@@ -34,7 +41,7 @@ def fetch_historical(day, product_id):
 
     # Fallback to real-time
     url_rt = f"{BASE_URL}/EstacionesTerrestres/FiltroProducto/{product_id}"
-    resp = requests.get(url_rt, timeout=30)
+    resp = session.get(url_rt, timeout=60)
     resp.raise_for_status()
     return resp.json()
 
