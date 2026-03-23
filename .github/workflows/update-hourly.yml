@@ -1,0 +1,36 @@
+name: Update fuel prices hourly
+
+on:
+  schedule:
+    # Every hour at minute 5 (avoid exact :00 which is crowded)
+    - cron: '5 * * * *'
+  workflow_dispatch: # Allow manual trigger
+
+permissions:
+  contents: write
+
+jobs:
+  update-prices:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Fetch latest prices and update
+        run: python scripts/update_hourly.py
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add prices_latest.json metadata.json
+          git diff --cached --quiet || git commit -m "Precios actualizados $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git push

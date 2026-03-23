@@ -1,0 +1,36 @@
+name: Update historical data daily
+
+on:
+  schedule:
+    # Every day at 02:30 UTC (03:30 CET / 04:30 CEST)
+    - cron: '30 2 * * *'
+  workflow_dispatch: # Allow manual trigger
+
+permissions:
+  contents: write
+
+jobs:
+  update-historical:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests pandas pyarrow duckdb
+
+      - name: Fetch yesterday's historical data and rebuild
+        run: python scripts/update_daily.py
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet || git commit -m "Datos históricos $(date -u -d 'yesterday' +'%Y-%m-%d')"
+          git push
