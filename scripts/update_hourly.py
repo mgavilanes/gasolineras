@@ -57,8 +57,7 @@ def main():
                 all_prices[ideess] = {"g95": None, "g98": None, "gA": None}
             all_prices[ideess][key] = price
 
-    # Build prices_latest.json: {id: [g95, g98, gA, fecha_str]}
-    # Parse API date for the fecha field
+    # Parse API date
     fecha_str = ""
     if api_fecha:
         try:
@@ -67,13 +66,24 @@ def main():
         except ValueError:
             fecha_str = datetime.utcnow().strftime("%Y-%m-%d")
 
+    # Build per-fuel files: {id: precio, ...} (fecha goes in metadata)
+    for key in PRODUCTS.values():
+        fuel_prices = {}
+        for ideess, p in all_prices.items():
+            if p[key] is not None:
+                fuel_prices[ideess] = p[key]
+        path = f"prices_{key}.json"
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(fuel_prices, f, ensure_ascii=False)
+        print(f"{path}: {len(fuel_prices)} stations")
+
+    # Keep prices_latest.json for backwards compatibility
     prices_latest = {}
     for ideess, p in all_prices.items():
         prices_latest[ideess] = [p["g95"], p["g98"], p["gA"], fecha_str]
-
     with open("prices_latest.json", "w", encoding="utf-8") as f:
         json.dump(prices_latest, f, ensure_ascii=False)
-    print(f"prices_latest.json: {len(prices_latest)} stations")
+    print(f"prices_latest.json: {len(prices_latest)} stations (compat)")
 
     # Update metadata.json
     meta_path = "metadata.json"
