@@ -16,7 +16,8 @@ PRODUCTS = {1: "g95", 3: "g98", 4: "gA"}
 
 session = requests.Session()
 session.mount("https://", HTTPAdapter(max_retries=Retry(
-    total=4, backoff_factor=2, status_forcelist=[500, 502, 503, 504]
+    total=8, backoff_factor=3, status_forcelist=[500, 502, 503, 504],
+    allowed_methods=["GET"],
 )))
 
 
