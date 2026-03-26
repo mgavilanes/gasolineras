@@ -57,14 +57,17 @@ def main():
                 all_prices[ideess] = {"g95": None, "g98": None, "gA": None}
             all_prices[ideess][key] = price
 
-    # Parse API date
+    # Parse API date and time
     fecha_str = ""
+    actualizado_str = ""
     if api_fecha:
         try:
             dt = datetime.strptime(api_fecha.split(".")[0], "%d/%m/%Y %H:%M:%S")
             fecha_str = dt.strftime("%Y-%m-%d")
+            actualizado_str = dt.strftime("%Y-%m-%dT%H:%M")
         except ValueError:
             fecha_str = datetime.utcnow().strftime("%Y-%m-%d")
+            actualizado_str = datetime.utcnow().strftime("%Y-%m-%dT%H:%M")
 
     # Build per-fuel files: {id: precio, ...} (fecha goes in metadata)
     for key in PRODUCTS.values():
@@ -128,7 +131,7 @@ def main():
         metadata = {}
 
     metadata["ultima_fecha_datos"] = fecha_str
-    metadata["actualizado"] = datetime.utcnow().strftime("%Y-%m-%dT%H:%M")
+    metadata["actualizado"] = actualizado_str
     metadata["n_estaciones"] = len(prices_latest)
 
     with open(meta_path, "w", encoding="utf-8") as f:
