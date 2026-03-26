@@ -2,8 +2,8 @@ name: Update historical data daily
 
 on:
   schedule:
-    # Every day at 02:30 UTC (03:30 CET / 04:30 CEST)
-    - cron: '30 2 * * *'
+    # Every day at 08:30 UTC (10:30 CEST) — avoids API blocks at night
+    - cron: '30 8 * * *'
   workflow_dispatch: # Allow manual trigger
 
 permissions:
@@ -25,6 +25,36 @@ jobs:
         run: pip install requests pandas pyarrow duckdb
 
       - name: Fetch yesterday's historical data and rebuild
+        run: python scripts/update_daily.py
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet || git commit -m "Datos históricos $(date -u -d 'yesterday' +'%Y-%m-%d')"
+          git push
+
+  retry-on-failure:
+    needs: update-historical
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait 5 minutes before retry
+        run: sleep 300
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests pandas pyarrow duckdb
+
+      - name: Fetch yesterday's historical data and rebuild (retry)
         run: python scripts/update_daily.py
 
       - name: Commit and push

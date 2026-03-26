@@ -15,6 +15,9 @@ BASE_URL = "https://sedeaplicaciones.minetur.gob.es/ServiciosRESTCarburantes/Pre
 PRODUCTS = {1: "g95", 3: "g98", 4: "gA"}
 
 session = requests.Session()
+session.headers.update({
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+})
 session.mount("https://", HTTPAdapter(max_retries=Retry(
     total=8, backoff_factor=3, status_forcelist=[500, 502, 503, 504],
     allowed_methods=["GET"],

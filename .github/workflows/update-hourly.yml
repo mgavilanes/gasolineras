@@ -2,8 +2,8 @@ name: Update fuel prices hourly
 
 on:
   schedule:
-    # Every hour at minute 5 (avoid exact :00 which is crowded)
-    - cron: '5 * * * *'
+    # Every hour from 07:00 to 23:00 UTC (09:00-01:00 hora española)
+    - cron: '5 7-23 * * *'
   workflow_dispatch: # Allow manual trigger
 
 permissions:
@@ -12,6 +12,10 @@ permissions:
 jobs:
   update-prices:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        attempt: [1]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -25,6 +29,36 @@ jobs:
         run: pip install requests
 
       - name: Fetch latest prices and update
+        run: python scripts/update_hourly.py
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add prices_latest.json prices_g95.json prices_g98.json prices_gA.json prices_dates.json prices_prev.json metadata.json
+          git diff --cached --quiet || git commit -m "Precios actualizados $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git push
+
+  retry-on-failure:
+    needs: update-prices
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait 5 minutes before retry
+        run: sleep 300
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Fetch latest prices and update (retry)
         run: python scripts/update_hourly.py
 
       - name: Commit and push
