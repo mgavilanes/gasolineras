@@ -85,6 +85,40 @@ def main():
         json.dump(prices_latest, f, ensure_ascii=False)
     print(f"prices_latest.json: {len(prices_latest)} stations (compat)")
 
+    # Update prices_dates.json — last date each station changed price
+    dates_path = "prices_dates.json"
+    prev_path = "prices_prev.json"
+
+    # Load previous prices (from last hourly run)
+    prev_prices = {}
+    if os.path.exists(prev_path):
+        with open(prev_path, "r", encoding="utf-8") as f:
+            prev_prices = json.load(f)
+
+    # Load existing dates
+    dates = {}
+    if os.path.exists(dates_path):
+        with open(dates_path, "r", encoding="utf-8") as f:
+            dates = json.load(f)
+
+    # Compare: if any fuel price changed, update the date
+    changed = 0
+    for ideess, p in all_prices.items():
+        prev = prev_prices.get(ideess)
+        if prev is None or p["g95"] != prev.get("g95") or p["g98"] != prev.get("g98") or p["gA"] != prev.get("gA"):
+            dates[ideess] = fecha_str
+            changed += 1
+        elif ideess not in dates:
+            dates[ideess] = fecha_str
+
+    with open(dates_path, "w", encoding="utf-8") as f:
+        json.dump(dates, f, ensure_ascii=False)
+    print(f"prices_dates.json: {len(dates)} stations ({changed} changed)")
+
+    # Save current prices as prev for next run
+    with open(prev_path, "w", encoding="utf-8") as f:
+        json.dump(all_prices, f, ensure_ascii=False)
+
     # Update metadata.json
     meta_path = "metadata.json"
     if os.path.exists(meta_path):
