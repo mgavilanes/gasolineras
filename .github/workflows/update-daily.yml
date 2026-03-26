@@ -2,8 +2,8 @@ name: Update historical data daily
 
 on:
   schedule:
-    # Every day at 08:30 UTC (10:30 CEST) — avoids API blocks at night
-    - cron: '30 8 * * *'
+    # Every day at 02:30 UTC (03:30 CET / 04:30 CEST)
+    - cron: '30 2 * * *'
   workflow_dispatch: # Allow manual trigger
 
 permissions:
