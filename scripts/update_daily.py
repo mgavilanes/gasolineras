@@ -31,23 +31,44 @@ session.mount("https://", HTTPAdapter(max_retries=Retry(
 )))
 
 
-def fetch_historical(day, product_id):
+def fetch_historical(day, product_id, max_attempts=5):
     """Fetch historical data for a specific day. Falls back to real-time."""
+    import time
     url = f"{BASE_URL}/EstacionesTerrestresHist/FiltroProducto/{day.strftime('%d-%m-%Y')}/{product_id}"
-    try:
-        resp = session.get(url, timeout=60)
-        resp.raise_for_status()
-        data = resp.json()
-        if data.get("ListaEESSPrecio"):
-            return data
-    except Exception:
-        pass
+
+    for attempt in range(1, max_attempts + 1):
+        try:
+            resp = session.get(url, timeout=90)
+            resp.raise_for_status()
+            data = resp.json()
+            if data.get("ListaEESSPrecio"):
+                return data
+            break  # Got response but no data, try fallback
+        except (requests.ConnectionError, requests.Timeout) as e:
+            wait = 30 * attempt
+            print(f"  Connection error (attempt {attempt}/{max_attempts}): {e}")
+            if attempt == max_attempts:
+                print(f"  Trying real-time fallback...")
+                break
+            print(f"  Waiting {wait}s before retry...")
+            time.sleep(wait)
+        except Exception:
+            break
 
     # Fallback to real-time
-    url_rt = f"{BASE_URL}/EstacionesTerrestres/FiltroProducto/{product_id}"
-    resp = session.get(url_rt, timeout=60)
-    resp.raise_for_status()
-    return resp.json()
+    for attempt in range(1, max_attempts + 1):
+        try:
+            url_rt = f"{BASE_URL}/EstacionesTerrestres/FiltroProducto/{product_id}"
+            resp = session.get(url_rt, timeout=90)
+            resp.raise_for_status()
+            return resp.json()
+        except (requests.ConnectionError, requests.Timeout) as e:
+            wait = 30 * attempt
+            print(f"  Fallback connection error (attempt {attempt}/{max_attempts}): {e}")
+            if attempt == max_attempts:
+                raise
+            print(f"  Waiting {wait}s before retry...")
+            time.sleep(wait)
 
 
 def parse_decimal(value):

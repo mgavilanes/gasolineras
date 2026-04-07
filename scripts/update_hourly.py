@@ -24,11 +24,21 @@ session.mount("https://", HTTPAdapter(max_retries=Retry(
 )))
 
 
-def fetch_product(product_id):
+def fetch_product(product_id, max_attempts=5):
     url = f"{BASE_URL}/EstacionesTerrestres/FiltroProducto/{product_id}"
-    resp = session.get(url, timeout=60)
-    resp.raise_for_status()
-    return resp.json()
+    import time
+    for attempt in range(1, max_attempts + 1):
+        try:
+            resp = session.get(url, timeout=90)
+            resp.raise_for_status()
+            return resp.json()
+        except (requests.ConnectionError, requests.Timeout) as e:
+            wait = 30 * attempt
+            print(f"  Connection error (attempt {attempt}/{max_attempts}): {e}")
+            if attempt == max_attempts:
+                raise
+            print(f"  Waiting {wait}s before retry...")
+            time.sleep(wait)
 
 
 def parse_decimal(value):
